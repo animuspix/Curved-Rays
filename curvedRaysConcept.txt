@@ -1,0 +1,24 @@
+new programming concept - for LA maybe?
+
+- raytracing a procedural volume, with curve-based density & materials
+
+- shading model: lots of tiny flakes, individually diffuse or specular (no explicit volumetrics)
+- all materials PBR, either Oren-Nayar or GGX/Smith
+- volume SPD stored as a gaussian tensor (a, b, c constraints with gaussian constraints on x, y, z expressed as other gaussian triplets), for a total of 27 floats over all 1T voxels
+- roughness stored similarly (but simpler, sinusoidal f/m on x/y/z instead of gaussians, for a total of 12 values instead of 27) 
+- density function same as roughness (high-amplitude waves mean deeper high-density phases, rather than rougher regions)
+- property functions are renormalized to run from -axis to +axis, to cover the full domain from -xyz to +xyz instead of only positive axes  
+- For better diversity, can support one level of spatial nesting
+-> 8 separate functions for each property (density, roughness, etc) instead of 1, equivalent to one function in each octant of the basis domain
+-> Points within sub-functions are trilinearly interpolated between axes, then snapped to the nearest neighbour sub-function and interpolated between their current value and the value of the neighbour function at the border, based on their distance from the border before the snap
+
+- Specular vs diffuse materials decided using a series of three sine functions for each of x/y/z (see roughness generator above), with (diffuse | spec metallic | spec glassy) decided by taking the max of each
+
+Intersecting these curves?
+- Seems like computing an SDF...pain
+- Semi-analytical solution
+-> Trace a ray through the bounding-box of the volume
+-> Incrementally step from the camera towards the ray terminus (constant 255 steps should be sufficient)
+-> Chance of overstep statistically determined by sample density (1.0f/100% density is a guaranteed intersection)
+
+On startup - resolve density roughness, SPD, etc. basis parameters using random numbers, other algorithms are too complicated/elaborate to be practical (could supply generators from a lambda for easy user funkery, though)
